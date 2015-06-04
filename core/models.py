@@ -129,10 +129,17 @@ class BookNode(MPTTModel):
         return pa
 
     def get_root_node(self):
-        pa = self
-        while pa.node_type != 'book':
-            pa = pa.parent
-        return pa
+        """
+        Proxy to MPTT builtin get_root
+        """
+        return self.get_root()
+
+    def get_book(self):
+        """
+        Get the book object that this node is a child of
+        :return: Book object
+        """
+        return self.get_root().book_set.first()
 
     def get_descendants_inc_self(self):
         return self.get_descendants(include_self=True)
