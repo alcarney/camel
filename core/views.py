@@ -16,6 +16,7 @@ from django.template import RequestContext
 # auth
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
 
 # model-based views
@@ -49,6 +50,7 @@ class Module_ListView(ListView):
 class Module_DetailView(DetailView):
     model = Module
     template_name = 'module_detail.html'
+
     def get_context_data(self, **kwargs):
         context = super(Module_DetailView, self).get_context_data(**kwargs)
         module = self.get_object()
@@ -109,17 +111,20 @@ class BookNode_DetailView(DetailView):
 
 # the following should be implemented with javascript on the client
 # should use mptt instance methods instead of mpath
+
 def selected(request, pk, node_type):
-    context = RequestContext(request)
-    booknode = BookNode.objects.get( pk=pk )
-    module  = Module.objects.get( code=booknode.mpath[:6] )
-    chapter = BookNode.objects.get( mpath=booknode.mpath[:12] )
+    context = {}
+    booknode = BookNode.objects.get(pk=pk)
+    module  = Module.objects.get(code=booknode.mpath[:6] )
+    chapter = BookNode.objects.get(mpath=booknode.mpath[:12] )
+
     context['module']  = module
     context['chapter']  = chapter
     context['book']  = Book.objects.get( tree=chapter.get_root_node() )
     context['user']  = request.user
 
     context['node_type'] = node_type
+
     if node_type == 'theorem':
         qset = BookNode.objects.filter(node_class="theorem", mpath__startswith=chapter.mpath).order_by('mpath')
     elif node_type == 'test':
@@ -448,24 +453,14 @@ def search(request):
 # users
 #--------------------
 def login_view(request):
-    context = RequestContext(request)
     if request.method == 'POST':
-        username = request.POST['username']
-        password = request.POST['password']
-        user = authenticate(username=username, password=password)
-        if user:
-            if user.is_active:
-                login(request, user)
-                return render(request, 'userhome.html', {'pk': user.pk})
-
-                return HttpResponseRedirect('/')
-            else:
-                return HttpResponse("Account is inactive.")
-        else:
-            print "Invalid login details: %s, %s" % (username, password)
-            return HttpResponse("Login incorrect.")
+        form = AuthenticationForm(request, request.POST)
+        if form.is_valid():
+            login(request, form.get_user())
+            return render(request, 'userhome.html', {'pk': form.get_user_id()})
     else:
-        return render_to_response('login.html', {}, context)
+        form = AuthenticationForm(request)
+    return render(request, "login.html", {"form": form})
 
 @login_required
 def userhome(request, pk):

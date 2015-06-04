@@ -8,3 +8,5 @@ DATABASES = {
 }
 
 SECRET_KEY = 'a_secret_key'
+
+INSTALLED_APPS = INSTALLED_APPS + ('debug_toolbar',)
