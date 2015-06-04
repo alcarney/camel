@@ -154,7 +154,7 @@ class Book(models.Model):
     author = models.CharField(max_length=100, null=True, blank=True)
     version = models.CharField(max_length=100, null=True, blank=True)
     new_commands = models.CharField(max_length=5000, null=True, blank=True)
-    tree = models.ForeignKey(BookNode, related_name="book_tree", null=True)
+    tree = models.ForeignKey(BookNode, related_name="book_set", null=True)
 
     def __unicode__(self):
         s = ''
