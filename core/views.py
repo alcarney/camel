@@ -81,8 +81,8 @@ class Chapter_DetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super(Chapter_DetailView, self).get_context_data(**kwargs)
         chapter = self.get_object()
-        context['module']  = Module.objects.get( code=chapter.mpath[:6] )
-        context['book']  = Book.objects.get( tree=chapter.get_root_node() )
+        context['module']  = Module.objects.get( code=chapter.mpath[:6] ) # TODO: use direct relation method
+        context['book']  = chapter.get_book()
         context['chapter'] = chapter
         context['subtree'] = chapter.get_descendants(include_self=True)
         context['toc'] = chapter.get_siblings(include_self=True)
@@ -120,7 +120,7 @@ def selected(request, pk, node_type):
 
     context['module']  = module
     context['chapter']  = chapter
-    context['book']  = Book.objects.get( tree=chapter.get_root_node() )
+    context['book']  = chapter.get_book()
     context['user']  = request.user
 
     context['node_type'] = node_type
@@ -227,7 +227,7 @@ def edit_answer(request, pk):
     context = {}
     qu = BookNode.objects.get(pk=pk)
     context['module']  = get_object_or_404( Module, code=qu.mpath[:6] )
-    context['book']  = Book.objects.get( tree=qu.get_root_node() )
+    context['book']  = qu.get_book()
     context['question'] = qu
     context['subtree'] = qu.get_descendants(include_self=True)
     context['chapter'] = qu.get_parent_chapter()
@@ -301,7 +301,7 @@ def sctest(request, pk):
     context['test'] = test
     context['chapter'] = chapter
     context['questions'] = questions
-    context['book']  = Book.objects.get( tree=chapter.get_root_node() )
+    context['book']  = chapter.get_book()
     context['toc'] = BookNode.objects.filter( node_type="homework", mpath__startswith=chapter.mpath ).order_by('mpath')
 
     # navigation
@@ -383,7 +383,7 @@ def homework(request, pk):
     # context['subtree'] = ex.get_descendants(include_self=True)
     chapter = hwk.get_parent_chapter()
     context['chapter'] = chapter
-    context['book']  = Book.objects.get( tree=chapter.get_root_node() )
+    context['book']  = hwk.get_book()
     context['toc'] = BookNode.objects.filter( node_type="homework", mpath__startswith=hwk.mpath[:9] ).order_by('mpath')
 
     # navigation
