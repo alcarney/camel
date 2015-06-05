@@ -71,7 +71,7 @@ class Book_DetailView(DetailView):
         book = self.get_object()
         context['book'] = book
         context['module'] = book.module
-        context['chapters'] = book.tree.filter(node_type="chapter")
+        context['chapters'] = book.tree.get_descendants().filter(node_type="chapter")
         context['next'] = book.get_next()
         context['prev'] = book.get_prev()
         context['toc'] = Book.objects.filter(module=book.module.id).order_by('number')
@@ -90,8 +90,6 @@ class Chapter_DetailView(DetailView):
         context['chapter'] = chapter
         context['subtree'] = chapter.get_descendants(include_self=True)
         context['toc'] = chapter.get_siblings(include_self=True)
-        context['next'] = chapter.get_next()
-        context['prev'] = chapter.get_prev()
         return context
 
 class BookNode_DetailView(DetailView):
@@ -240,7 +238,7 @@ def edit_answer(request, pk):
     context['toc'] = qu.get_siblings(include_self=True)
 
     # navigation
-    questions = assignment.get_decendants().filter(node_type="question").order_by('mpath')
+    questions = assignment.get_descendants().filter(node_type="question").order_by('mpath')
     next = questions.filter( mpath__gt=qu.mpath )
     prev = questions.filter( mpath__lt=qu.mpath ).order_by('-pk')
     context['next'] = next[0] if next else None
@@ -395,7 +393,7 @@ def homework(request, pk):
     # navigation
     next = homeworks.filter( mpath__gt=hwk.mpath )
     prev = homeworks.filter( mpath__lt=hwk.mpath ).order_by('-mpath')
-    context['next'] = next[0] if next else None
+    context['nnext'] = next[0] if next else None
     context['prev'] = prev[0] if prev else None
 
     questions = BookNode.objects.filter(node_type='question', mpath__startswith=hwk.mpath).order_by('mpath')

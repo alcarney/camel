@@ -33,8 +33,9 @@
 {% endblock %}
 
 {% block browse-horizontal %}
-<span class="left">{% if prev %}<a href="{% url 'chapter-detail' prev.pk %}">&lt; {{ prev.number }}. {{ prev.title }}</a>{% endif %}</span>
-<span class="right">{% if next %}<a href="{% url 'chapter-detail' next.pk %}">{{ next.number }}. {{ next.title }} &gt;</a>{% endif %}</span>
+    {% with obj=chapter %}
+        {% include "bottomnav.html" %}
+    {% endwith %}
 {% endblock %}
 
 {% block sidebar %}

@@ -87,17 +87,34 @@ class BookNode(MPTTModel):
     def get_absolute_url(self):
         return reverse('booknode-detail', kwargs={'pk': self.pk})
 
-    def get_next(self):
-        nesaf = self.get_next_sibling()
-        if nesaf:
-            return nesaf
-        return False
+    def get_pretty_url(self):
+        if self.node_type == "chapter":
+            return reverse('chapter-detail', args=[self.pk])
+        return self.get_absolute_url()
 
-    def get_prev(self):
-        prev = self.get_previous_sibling()
-        if prev:
-            return prev
-        return False
+    def get_next(self, n_type=None):
+        c = self
+        while c.get_next_sibling():
+            n = c.get_next_sibling()
+            if not n_type or n.node_type == n_type:
+                return n
+            c = n
+        return None
+
+    def get_next_same_type(self):
+        return self.get_next(self.node_type)
+
+    def get_prev(self, n_type=None):
+        c = self
+        while c.get_previous_sibling():
+            p = c.get_previous_sibling()
+            if not n_type or p.node_type == n_type:
+                return p
+            c = p
+        return None
+
+    def get_prev_same_type(self):
+        return self.get_prev(self.node_type)
 
     def get_parent_by_type(self, node_type):
         """
