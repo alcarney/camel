@@ -18,8 +18,6 @@ MODULE_CODES = (
     ('MA1501','MA1501'),
 )
 
-#------------------------------------------------
-# Module
 
 class Module(models.Model):
 
@@ -57,11 +55,6 @@ class Module(models.Model):
         return None
 
 
-    # this allows us to run doctree.py in a django shell
-
-
-#------------------------------------------------
-# BookNode
 class BookNode(MPTTModel):
 
     # keys
@@ -80,9 +73,9 @@ class BookNode(MPTTModel):
     image = models.ImageField(upload_to='figure_images', null=True, blank=False)
 
     # labels
-    node_id = models.PositiveSmallIntegerField() # serial number (from booktree.py)
-    mpath = models.CharField(max_length=100, null=True) # materialized path (from booktree.py)
-    label = models.CharField(max_length=100, null=True, blank=False) #
+    node_id = models.PositiveSmallIntegerField()  # serial number (from booktree.py)
+    mpath = models.CharField(max_length=100, null=True)  # materialized path (from booktree.py)
+    label = models.CharField(max_length=100, null=True, blank=False)
 
     def get_absolute_url(self):
         return reverse('booknode-detail', kwargs={'pk': self.pk})
@@ -181,11 +174,8 @@ class BookNode(MPTTModel):
     def __unicode__(self):
         return self.mpath
 
-#------------------------------------------------
-# Module
-class Book(models.Model):
 
-    # attributes
+class Book(models.Model):
     module = models.ForeignKey(Module, null=True, blank=True, related_name="book_set")
     number = models.PositiveSmallIntegerField(null=True)
     title = models.CharField(max_length=100, null=True, blank=True)
@@ -216,8 +206,6 @@ class Book(models.Model):
         return self.module.book_set.filter(number__lt=self.number).last()
 
 
-#------------------------------------------------
-# Label
 class Label(models.Model):
     book = models.ForeignKey(Book)
     text = models.CharField(max_length=100)
@@ -226,10 +214,8 @@ class Label(models.Model):
     def __unicode__(self):
         return unicode(self.text) + u' -> ' + unicode(self.mpath)
 
-#------------------------------------------------
-# Answer
-class Answer(models.Model):
 
+class Answer(models.Model):
     user = models.ForeignKey(User)
     question = models.ForeignKey(BookNode)
     text = models.TextField()
@@ -261,10 +247,8 @@ class SingleChoiceAnswer(models.Model):
         s = s + '|' + str(self.is_readonly) + '\n'
         return unicode(s)
 
-#------------------------------------------------
-# Assessment
-class Submission(models.Model):
 
+class Submission(models.Model):
     user = models.ForeignKey(User)
     assignment = models.ForeignKey(BookNode)
     is_readonly = models.BooleanField(default=True)
