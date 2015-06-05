@@ -7,7 +7,7 @@
 			"code": "MA1234", 
 			"title": "Probability Theory",
 			"teacher": 11, 
-			"students": [101,102,103,104,105,106], 
+			"students": [101,102,103,104], 
 			"twitter_widget_id": ""
 		}
 	},
@@ -19,7 +19,7 @@
 			"code": "MA0000", 
 			"title": "The Camel System", 
 			"teacher": 11, 
-			"students": [101,102,103,104,105,106], 
+			"students": [101,102,103,104], 
 			"twitter_widget_id": ""
 		}
 	}
