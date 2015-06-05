@@ -61,27 +61,31 @@ class Module_DetailView(DetailView):
         context['toc'] = Module.objects.all().order_by('code')
         return context
 
+
 class Book_DetailView(DetailView):
     model = Book
     template_name = 'book_detail.html'
+
     def get_context_data(self, **kwargs):
         context = super(Book_DetailView, self).get_context_data(**kwargs)
         book = self.get_object()
         context['book'] = book
         context['module'] = book.module
-        context['chapters'] = BookNode.objects.filter( node_type="chapter", mpath__startswith=book.tree.mpath )
+        context['chapters'] = book.tree.filter(node_type="chapter")
         context['next'] = book.get_next()
         context['prev'] = book.get_prev()
         context['toc'] = Book.objects.filter(module=book.module.id).order_by('number')
         return context
 
+
 class Chapter_DetailView(DetailView):
     model = BookNode
     template_name = 'chapter_detail.html'
+
     def get_context_data(self, **kwargs):
         context = super(Chapter_DetailView, self).get_context_data(**kwargs)
         chapter = self.get_object()
-        context['module']  = Module.objects.get( code=chapter.mpath[:6] ) # TODO: use direct relation method
+        context['module'] = chapter.get_book().module
         context['book']  = chapter.get_book()
         context['chapter'] = chapter
         context['subtree'] = chapter.get_descendants(include_self=True)
@@ -98,13 +102,12 @@ class BookNode_DetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super(BookNode_DetailView, self).get_context_data(**kwargs)
         subtree = self.get_object().get_descendants(include_self=True)
-        mcode = self.get_object().mpath[:6]
-        module = get_object_or_404(Module, code=mcode)
-        context['module']  = module
-        context['subtree']  = subtree
-        chapter = self.get_parent_chapter()
-        context['chapter']  = chapter
-        context['toc']  = Book.objects.filter( module=module )
+        module = self.get_object().get_book().module
+        context['module'] = module
+        context['subtree'] = subtree
+        chapter = self.get_object().get_parent_chapter()
+        context['chapter'] = chapter
+        context['toc'] = Book.objects.filter( module=module )  # TODO: use related name here
         context['next'] = self.get_object().get_next()
         context['prev'] = self.get_object().get_prev()
         return context
@@ -115,23 +118,24 @@ class BookNode_DetailView(DetailView):
 def selected(request, pk, node_type):
     context = {}
     booknode = BookNode.objects.get(pk=pk)
-    module  = Module.objects.get(code=booknode.mpath[:6] )
-    chapter = BookNode.objects.get(mpath=booknode.mpath[:12] )
+    module = booknode.get_book().module
+    chapter = booknode.get_parent_chapter()
 
-    context['module']  = module
-    context['chapter']  = chapter
-    context['book']  = chapter.get_book()
-    context['user']  = request.user
+    context['module'] = module
+    context['chapter'] = chapter
+    context['book'] = chapter.get_book()
+    context['user'] = request.user
 
     context['node_type'] = node_type
 
+    chapter_items = chapter.get_descendants()
     if node_type == 'theorem':
-        qset = BookNode.objects.filter(node_class="theorem", mpath__startswith=chapter.mpath).order_by('mpath')
+        qset = chapter_items.filter(node_class="theorem")
     elif node_type == 'test':
-        qset = BookNode.objects.filter(node_type__in=['singlechoice','multiplechoice'], mpath__startswith=chapter.mpath).order_by('mpath')
+        qset = chapter_items.filter(node_type__in=['singlechoice', 'multiplechoice'])
     else:
-        qset = BookNode.objects.filter(node_type=node_type, mpath__startswith=chapter.mpath).order_by('mpath')
-    context['booknodes'] = qset
+        qset = chapter_items.filter(node_type=node_type)
+    context['booknodes'] = qset.order_by('mpath')
 
     context['next'] = chapter.get_next()
     context['prev'] = chapter.get_prev()
@@ -226,28 +230,29 @@ def selected(request, pk, node_type):
 def edit_answer(request, pk):
     context = {}
     qu = BookNode.objects.get(pk=pk)
-    context['module']  = get_object_or_404( Module, code=qu.mpath[:6] )
-    context['book']  = qu.get_book()
+    context['module'] = qu.get_book().module
+    context['book'] = qu.get_book()
     context['question'] = qu
     context['subtree'] = qu.get_descendants(include_self=True)
     context['chapter'] = qu.get_parent_chapter()
-    context['assignment'] = qu.get_parent_assignment()
+    assignment = qu.get_parent_assignment()
+    context['assignment'] = assignment
     context['toc'] = qu.get_siblings(include_self=True)
 
     # navigation
-    questions = BookNode.objects.filter( node_type="question", mpath__startswith=qu.mpath[:12] ).order_by('mpath')
+    questions = assignment.get_decendants().filter(node_type="question").order_by('mpath')
     next = questions.filter( mpath__gt=qu.mpath )
     prev = questions.filter( mpath__lt=qu.mpath ).order_by('-pk')
     context['next'] = next[0] if next else None
     context['prev'] = prev[0] if prev else None
 
-	# answer form
+    # answer form
     # retreive current saved answer (if any)
-    ans = Answer.objects.filter(question=qu, user=request.user).first()
-    if ans:
+    try:
+        ans = Answer.objects.get(question=qu, user=request.user)
         form = AnswerForm(instance=ans)
-    else:
-        form = AnswerForm( initial={'question': qu, 'user': request.user})
+    except Answer.DoesNotExist:
+        form = AnswerForm(initial={'question': qu, 'user': request.user})
 
     # gulp
     if request.method == 'POST':
@@ -297,7 +302,7 @@ def sctest(request, pk):
     chapter = test.get_parent_chapter()
     questions = BookNode.objects.filter(node_type='question', mpath__startswith=test.mpath).order_by('mpath')
 
-    context['module']  = get_object_or_404( Module, code=test.mpath[:6] )
+    context['module'] = chapter.get_book().module
     context['test'] = test
     context['chapter'] = chapter
     context['questions'] = questions
@@ -378,17 +383,16 @@ def sctest(request, pk):
 def homework(request, pk):
     context = {}
     hwk = BookNode.objects.get(pk=pk)
-    context['module']  = get_object_or_404( Module, code=hwk.mpath[:6] )
+    context['module'] = hwk.get_book().module
     context['homework'] = hwk
     # context['subtree'] = ex.get_descendants(include_self=True)
     chapter = hwk.get_parent_chapter()
     context['chapter'] = chapter
-    context['book']  = hwk.get_book()
-    context['toc'] = BookNode.objects.filter( node_type="homework", mpath__startswith=hwk.mpath[:9] ).order_by('mpath')
+    context['book'] = hwk.get_book()
+    homeworks = chapter.get_descendants().filter(node_type="homework").order_by('mpath')
+    context["toc"] = homeworks
 
     # navigation
-    module = context['module']
-    homeworks = BookNode.objects.filter( node_type="homework", mpath__startswith=hwk.mpath[:9] ).order_by('mpath')
     next = homeworks.filter( mpath__gt=hwk.mpath )
     prev = homeworks.filter( mpath__lt=hwk.mpath ).order_by('-mpath')
     context['next'] = next[0] if next else None
