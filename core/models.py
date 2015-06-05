@@ -100,22 +100,36 @@ class BookNode(MPTTModel):
         return False
 
     def get_parent_by_type(self, node_type):
+        """
+        Get the closest parent node with the specified type
+        If no parent with the correct type exists, return the
+        root node
+        :param node_type:
+        :return: BookNode object
+        """
         pa = self.parent
+        if not pa:
+            # No parent - means we're the root
+            return None
         while pa.node_type != node_type:
+            if pa.is_root_node():
+                return pa
             pa = pa.parent
         return pa
 
     def get_parent_book(self):
-        pa = self
-        while pa.node_type != 'book':
-            pa = pa.parent
-        return pa
+        """
+        Get the first parent of this node of type book
+        :return: BookNode object
+        """
+        return self.get_parent_by_type("book")
 
     def get_parent_chapter(self):
-        pa = self
-        while pa.node_type != 'chapter':
-            pa = pa.parent
-        return pa
+        """
+        Get the first parent of this node of type chapter
+        :return: BookNode object
+        """
+        return self.get_parent_by_type("chapter")
 
     # def get_parent_homework(self):
     #     pa = self
@@ -155,7 +169,7 @@ class BookNode(MPTTModel):
 class Book(models.Model):
 
     # attributes
-    module = models.ForeignKey(Module, null=True, blank=True, related_name="book_module")
+    module = models.ForeignKey(Module, null=True, blank=True, related_name="book_module")  # TODO: fix related name
     number = models.PositiveSmallIntegerField(null=True)
     title = models.CharField(max_length=100, null=True, blank=True)
     author = models.CharField(max_length=100, null=True, blank=True)
