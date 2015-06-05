@@ -212,7 +212,7 @@ class Label(models.Model):
     mpath = models.CharField(max_length=1000)
 
     def __unicode__(self):
-        return unicode(self.text) + u' -> ' + unicode(self.mpath)
+        return u"{} -> {}".format(self.text, self.mpath)
 
 
 class Answer(models.Model):
@@ -225,11 +225,10 @@ class Answer(models.Model):
     updated = models.DateTimeField(auto_now=True)
 
     def __unicode__(self):
-        s = unicode( self.question.mpath )
-        s = s + unicode('|' + self.user.username )
-        s = s + unicode('|' + self.text )
-        s = s + unicode('|' + str(self.is_readonly) )
-        return s
+        base = u"{}|{}|{}".format(self.question.mpath, self.user.username, self.text)
+        if self.is_readonly:
+            base += u" (READONLY)"
+        return base
 
 class SingleChoiceAnswer(models.Model):
     user = models.ForeignKey(User)
