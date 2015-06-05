@@ -186,7 +186,7 @@ class BookNode(MPTTModel):
 class Book(models.Model):
 
     # attributes
-    module = models.ForeignKey(Module, null=True, blank=True, related_name="book_module")  # TODO: fix related name
+    module = models.ForeignKey(Module, null=True, blank=True, related_name="book_set")
     number = models.PositiveSmallIntegerField(null=True)
     title = models.CharField(max_length=100, null=True, blank=True)
     author = models.CharField(max_length=100, null=True, blank=True)
@@ -210,12 +210,10 @@ class Book(models.Model):
         return reverse('book-detail', kwargs={'pk': self.id})
 
     def get_next(self):
-        nesaf = Book.objects.filter(module=self.module, number__gt=self.number)
-        return nesaf[0] if nesaf else None
+        return self.module.book_set.filter(number__gt=self.number).first()
 
     def get_prev(self):
-        prev = Book.objects.filter(module=self.module, number__lt=self.number).order_by('-number')
-        return prev[0] if prev else None
+        return self.module.book_set.filter(number__lt=self.number).last()
 
 
 #------------------------------------------------

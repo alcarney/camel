@@ -55,7 +55,7 @@ class Module_DetailView(DetailView):
         context = super(Module_DetailView, self).get_context_data(**kwargs)
         module = self.get_object()
         context['module'] = module
-        context['books'] = Book.objects.filter(module=module.id).order_by('number')
+        context['books'] = module.book_set.all().order_by('number')
         context['next'] = module.get_next()
         context['prev'] = module.get_prev()
         context['toc'] = Module.objects.all().order_by('code')
@@ -74,7 +74,7 @@ class Book_DetailView(DetailView):
         context['chapters'] = book.tree.get_descendants().filter(node_type="chapter")
         context['next'] = book.get_next()
         context['prev'] = book.get_prev()
-        context['toc'] = Book.objects.filter(module=book.module.id).order_by('number')
+        context['toc'] = book.module.book_set.all().order_by('number')
         return context
 
 
@@ -105,7 +105,7 @@ class BookNode_DetailView(DetailView):
         context['subtree'] = subtree
         chapter = self.get_object().get_parent_chapter()
         context['chapter'] = chapter
-        context['toc'] = Book.objects.filter( module=module )  # TODO: use related name here
+        context['toc'] = module.book_set.all()
         context['next'] = self.get_object().get_next()
         context['prev'] = self.get_object().get_prev()
         return context

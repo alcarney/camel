@@ -92,7 +92,7 @@ class Command(BaseCommand):
                     out.info( 'Updating existing module %s/%s' % (code, year) )
 
                 number = preamble['book_number']
-                bk = Book.objects.filter(module=module, number=number).first()
+                bk = module.book_set.filter(number=number).first()
                 if bk:
                     out.info( 'Existing book %s/%s/%s will be deleted' % (code, year, number) )
                     for booknode in BookNode.objects.filter(mpath__startswith=bk.tree.mpath):

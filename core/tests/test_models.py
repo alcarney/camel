@@ -3,7 +3,7 @@ import pytest
 import string
 import random
 
-from core.models import Book, BookNode
+from core.models import Book, BookNode, Module
 
 
 def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
@@ -92,3 +92,29 @@ def test_get_parent_by_type_no_parents():
     mid = get_node(parent=book)
     leaf = get_node(parent=mid)
     assert leaf.get_parent_by_type("chapter") == book
+
+@pytest.mark.django_db
+def test_book_get_next_none():
+    module = mommy.make(Module)
+    first = mommy.make(Book, number=0, module=module)
+    assert first.get_next() is None
+
+@pytest.mark.django_db
+def test_book_get_next():
+    module = mommy.make(Module)
+    first = mommy.make(Book, number=0, module=module)
+    last = mommy.make(Book, number=1, module=module)
+    assert first.get_next() == last
+
+@pytest.mark.django_db
+def test_book_get_prev_none():
+    module = mommy.make(Module)
+    first = mommy.make(Book, number=0, module=module)
+    assert first.get_prev() is None
+
+@pytest.mark.django_db
+def test_book_get_prev():
+    module = mommy.make(Module)
+    first = mommy.make(Book, number=0, module=module)
+    last = mommy.make(Book, number=1, module=module)
+    assert last.get_prev() == first
