@@ -29,3 +29,5 @@ local/*
 
 # IPython files
 share/*
+camel.db.bak
+
