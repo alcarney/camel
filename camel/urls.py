@@ -19,7 +19,7 @@ urlpatterns = patterns('',
 
     # basic
     url(r'^$', views.index, name='index'),
-    url(r'^favicon\.ico$', RedirectView.as_view(url='/static/camel_logo.png')),
+    url(r'^favicon\.ico$', RedirectView.as_view(url='/static/core/images/camel_logo.png')),
     url(r'^admin/', include(admin.site.urls)),
     url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
 
