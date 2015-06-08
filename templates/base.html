@@ -2,12 +2,19 @@
 {% load staticfiles %}
 
 <head>
-{% block styles %}
-	<link rel="stylesheet" type="text/css" href="{% static 'base.css' %}"/>
+	{% comment %}
+	explicit link to favicon here to force a refresh since it has moved.
+	update the version number on the end if it moves again.
+	probably should have a fully qualified url.
+	{% endcomment %}
+	<link rel="shortcut icon" href="/favicon.ico?v=2" />
+
+	{% block styles %}
+	<link rel="stylesheet" type="text/css" href="{% static 'core/css/base.css' %}"/>
 {% endblock %}
 
 {% block scripts %}
-	<script type="text/javascript" src="{% static 'main.js' %}"></script>
+	<script type="text/javascript" src="{% static 'core/js/main.js' %}"></script>
 	<script type="text/javascript" src="http://code.jquery.com/jquery-1.7.min.js"></script>
 
 	<!-- mathjax -->
@@ -57,7 +64,7 @@
 
     <div id="header">
     {% block logo %}
-        <h1 id="logo"><a href="/"><img width="70" height="65" src="{% static 'camel_logo_reversed.png' %}", alt="camel (from iconsETC)"/></a></h1>
+        <h1 id="logo"><a href="/"><img width="70" height="65" src="{% static 'core/images/camel_logo_reversed.png' %}", alt="camel (from iconsETC)"/></a></h1>
     {% endblock %}
     {% block banner %}
         <h1 id="banner">

@@ -101,7 +101,9 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = (
-    os.path.join(SITE_ROOT, "static"),
+    os.path.join(SITE_ROOT, "core", "static"),
 )
+STATIC_ROOT = os.path.join(SITE_ROOT, "staticfiles")
+
 # redirect
 LOGIN_URL = '/login/'
