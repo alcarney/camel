@@ -18,8 +18,6 @@ MODULE_CODES = (
     ('MA1501','MA1501'),
 )
 
-#------------------------------------------------
-# Module
 
 class Module(models.Model):
 
@@ -61,11 +59,6 @@ class Module(models.Model):
         return None
 
 
-    # this allows us to run doctree.py in a django shell
-
-
-#------------------------------------------------
-# BookNode
 class BookNode(MPTTModel):
 
     # keys
@@ -84,42 +77,73 @@ class BookNode(MPTTModel):
     image = models.ImageField(upload_to='figure_images', null=True, blank=False)
 
     # labels
-    node_id = models.PositiveSmallIntegerField() # serial number (from booktree.py)
-    mpath = models.CharField(max_length=100, null=True) # materialized path (from booktree.py)
-    label = models.CharField(max_length=100, null=True, blank=False) #
+    node_id = models.PositiveSmallIntegerField()  # serial number (from booktree.py)
+    mpath = models.CharField(max_length=100, null=True)  # materialized path (from booktree.py)
+    label = models.CharField(max_length=100, null=True, blank=False)
 
     def get_absolute_url(self):
         return reverse('booknode-detail', kwargs={'pk': self.pk})
 
-    def get_next(self):
-        nesaf = self.get_next_sibling()
-        if nesaf:
-            return nesaf
-        return False
+    def get_pretty_url(self):
+        if self.node_type == "chapter":
+            return reverse('chapter-detail', args=[self.pk])
+        return self.get_absolute_url()
 
-    def get_prev(self):
-        prev = self.get_previous_sibling()
-        if prev:
-            return prev
-        return False
+    def get_next(self, n_type=None):
+        c = self
+        while c.get_next_sibling():
+            n = c.get_next_sibling()
+            if not n_type or n.node_type == n_type:
+                return n
+            c = n
+        return None
+
+    def get_next_same_type(self):
+        return self.get_next(self.node_type)
+
+    def get_prev(self, n_type=None):
+        c = self
+        while c.get_previous_sibling():
+            p = c.get_previous_sibling()
+            if not n_type or p.node_type == n_type:
+                return p
+            c = p
+        return None
+
+    def get_prev_same_type(self):
+        return self.get_prev(self.node_type)
 
     def get_parent_by_type(self, node_type):
+        """
+        Get the closest parent node with the specified type
+        If no parent with the correct type exists, return the
+        root node
+        :param node_type:
+        :return: BookNode object
+        """
         pa = self.parent
+        if not pa:
+            # No parent - means we're the root
+            return None
         while pa.node_type != node_type:
+            if pa.is_root_node():
+                return pa
             pa = pa.parent
         return pa
 
     def get_parent_book(self):
-        pa = self
-        while pa.node_type != 'book':
-            pa = pa.parent
-        return pa
+        """
+        Get the first parent of this node of type book
+        :return: BookNode object
+        """
+        return self.get_parent_by_type("book")
 
     def get_parent_chapter(self):
-        pa = self
-        while pa.node_type != 'chapter':
-            pa = pa.parent
-        return pa
+        """
+        Get the first parent of this node of type chapter
+        :return: BookNode object
+        """
+        return self.get_parent_by_type("chapter")
 
     # def get_parent_homework(self):
     #     pa = self
@@ -133,10 +157,17 @@ class BookNode(MPTTModel):
         return pa
 
     def get_root_node(self):
-        pa = self
-        while pa.node_type != 'book':
-            pa = pa.parent
-        return pa
+        """
+        Proxy to MPTT builtin get_root
+        """
+        return self.get_root()
+
+    def get_book(self):
+        """
+        Get the book object that this node is a child of
+        :return: Book object
+        """
+        return self.get_root().book_set.first()
 
     def get_descendants_inc_self(self):
         return self.get_descendants(include_self=True)
@@ -147,18 +178,15 @@ class BookNode(MPTTModel):
     def __unicode__(self):
         return self.mpath
 
-#------------------------------------------------
-# Module
-class Book(models.Model):
 
-    # attributes
-    module = models.ForeignKey(Module, null=True, blank=True, related_name="book_module")
+class Book(models.Model):
+    module = models.ForeignKey(Module, null=True, blank=True, related_name="book_set")
     number = models.PositiveSmallIntegerField(null=True)
     title = models.CharField(max_length=100, null=True, blank=True)
     author = models.CharField(max_length=100, null=True, blank=True)
     version = models.CharField(max_length=100, null=True, blank=True)
     new_commands = models.CharField(max_length=5000, null=True, blank=True)
-    tree = models.ForeignKey(BookNode, related_name="book_tree", null=True)
+    tree = models.ForeignKey(BookNode, related_name="book_set", null=True)
 
     def __unicode__(self):
         s = ''
@@ -176,28 +204,22 @@ class Book(models.Model):
         return reverse('book-detail', kwargs={'pk': self.id})
 
     def get_next(self):
-        nesaf = Book.objects.filter(module=self.module, number__gt=self.number)
-        return nesaf[0] if nesaf else None
+        return self.module.book_set.filter(number__gt=self.number).first()
 
     def get_prev(self):
-        prev = Book.objects.filter(module=self.module, number__lt=self.number).order_by('-number')
-        return prev[0] if prev else None
+        return self.module.book_set.filter(number__lt=self.number).last()
 
 
-#------------------------------------------------
-# Label
 class Label(models.Model):
     book = models.ForeignKey(Book)
     text = models.CharField(max_length=100)
     mpath = models.CharField(max_length=1000)
 
     def __unicode__(self):
-        return unicode(self.text) + u' -> ' + unicode(self.mpath)
+        return u"{} -> {}".format(self.text, self.mpath)
 
-#------------------------------------------------
-# Answer
+
 class Answer(models.Model):
-
     user = models.ForeignKey(User)
     question = models.ForeignKey(BookNode)
     text = models.TextField()
@@ -207,11 +229,10 @@ class Answer(models.Model):
     updated = models.DateTimeField(auto_now=True)
 
     def __unicode__(self):
-        s = unicode( self.question.mpath )
-        s = s + unicode('|' + self.user.username )
-        s = s + unicode('|' + self.text )
-        s = s + unicode('|' + str(self.is_readonly) )
-        return s
+        base = u"{}|{}|{}".format(self.question.mpath, self.user.username, self.text)
+        if self.is_readonly:
+            base += u" (READONLY)"
+        return base
 
 class SingleChoiceAnswer(models.Model):
     user = models.ForeignKey(User)
@@ -229,10 +250,8 @@ class SingleChoiceAnswer(models.Model):
         s = s + '|' + str(self.is_readonly) + '\n'
         return unicode(s)
 
-#------------------------------------------------
-# Assessment
-class Submission(models.Model):
 
+class Submission(models.Model):
     user = models.ForeignKey(User)
     assignment = models.ForeignKey(BookNode)
     is_readonly = models.BooleanField(default=True)
