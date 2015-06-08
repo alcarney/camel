@@ -40,19 +40,9 @@
 
 {% block sidebar %}
 	{% if toc %}
-	<h3>Chapters</h3>
-		{% for chap in toc %}
-			{% if chap.node_type == "chapter" %}
-				{% if chap.pk != chapter.pk %}
-					<p><a href="{% url 'chapter-detail' chap.pk %}"> {{ chap.number }}. {{ chap.title }}</a></p>
-				{% else %}
-					<p>{{ chap.number }}. {{ chap.title }}</p>
-				{% endif %}
-			{% endif %}
-		{% endfor %}
-	{% else %}
-	    <p>No toc</p>
-	{% endif %}
-
+    	<h3>Chapters</h3>
+        {% with obj=chapter %}
+            {% include "toc.html" %}
+        {% endwith %}
+    {%  endif %}
 {% endblock %}
-

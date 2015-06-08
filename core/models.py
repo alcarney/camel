@@ -113,6 +113,12 @@ class BookNode(MPTTModel):
     def get_prev_same_type(self):
         return self.get_prev(self.node_type)
 
+    def get_siblings_by_type(self, n_type=None):
+        return self.get_siblings(include_self=True).filter(node_type=n_type)
+
+    def get_siblings_same_type(self):
+        return self.get_siblings_by_type(self.node_type)
+
     def get_parent_by_type(self, node_type):
         """
         Get the closest parent node with the specified type
@@ -121,7 +127,8 @@ class BookNode(MPTTModel):
         :param node_type:
         :return: BookNode object
         """
-        pa = self.parent
+        # pa = self.parent
+        pa = self
         if not pa:
             # No parent - means we're the root
             return None
