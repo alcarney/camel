@@ -1536,10 +1536,7 @@ def main(args=None):
         pairs = book.get_label_mpaths()
         for pair in pairs:
             lab = core.models.Label()
-<<<<<<< HEAD
             lab.book = camel_book
-=======
->>>>>>> 0141e817d00d8878e57e76717d9b69239dd433e2
             lab.text = prefix + '.' + pair[0]
             lab.mpath = prefix + pair[1]
             if options.commit:

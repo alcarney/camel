@@ -28,11 +28,7 @@ class Module(models.Model):
 
     # users
     teacher = models.ForeignKey(User, null=True, blank=True, related_name="module_teacher")
-<<<<<<< HEAD
     students = models.ManyToManyField(User, related_name="module_students")
-=======
-    students = models.ManyToManyField(User, blank=True, related_name="module_students")
->>>>>>> 0141e817d00d8878e57e76717d9b69239dd433e2
 
     # misc
     twitter_widget_id = models.CharField(max_length=1024, null=True, blank=True)
