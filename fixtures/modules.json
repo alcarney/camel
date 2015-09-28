@@ -1,5 +1,6 @@
 [
 	{
+<<<<<<< HEAD
 		"model": "core.module", 
 		"pk": 1, 
 		"fields": {
@@ -13,17 +14,21 @@
 	},
 	{
 		"pk": 2, 
+=======
+		"pk": 1, 
+>>>>>>> 0141e817d00d8878e57e76717d9b69239dd433e2
 		"model": "core.module", 
 		"fields": {
 			"year": "2015-16", 
 			"code": "MA1234", 
 			"title": "Probability Theory",
 			"teacher": 11, 
-			"students": [101,102,103,104,105,106], 
+			"students": [101,102,103,104], 
 			"twitter_widget_id": ""
 		}
 	},
 	{
+<<<<<<< HEAD
 		"pk": 3, 
 		"model": "core.module", 
 		"fields": {
@@ -38,12 +43,16 @@
 	{
 		"pk": 4, 
 		"model": "core.module", 
+=======
+		"model": "core.module", 
+		"pk": 2, 
+>>>>>>> 0141e817d00d8878e57e76717d9b69239dd433e2
 		"fields": {
 			"year": "2015-16", 
-			"code": "MA0003", 
-			"title": "Preliminary Mathematics I",
-			"teacher": 14, 
-			"students": [101,102,103,104,105,106], 
+			"code": "MA0000", 
+			"title": "The Camel System", 
+			"teacher": 11, 
+			"students": [101,102,103,104], 
 			"twitter_widget_id": ""
 		}
 	}

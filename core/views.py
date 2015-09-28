@@ -16,6 +16,7 @@ from django.template import RequestContext
 # auth
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
 
 # model-based views
@@ -49,43 +50,46 @@ class Module_ListView(ListView):
 class Module_DetailView(DetailView):
     model = Module
     template_name = 'module_detail.html'
+
     def get_context_data(self, **kwargs):
         context = super(Module_DetailView, self).get_context_data(**kwargs)
         module = self.get_object()
         context['module'] = module
-        context['books'] = Book.objects.filter(module=module.id).order_by('number')
+        context['books'] = module.book_set.all().order_by('number')
         context['next'] = module.get_next()
         context['prev'] = module.get_prev()
         context['toc'] = Module.objects.all().order_by('code')
         return context
 
+
 class Book_DetailView(DetailView):
     model = Book
     template_name = 'book_detail.html'
+
     def get_context_data(self, **kwargs):
         context = super(Book_DetailView, self).get_context_data(**kwargs)
         book = self.get_object()
         context['book'] = book
         context['module'] = book.module
-        context['chapters'] = BookNode.objects.filter( node_type="chapter", mpath__startswith=book.tree.mpath )
+        context['chapters'] = book.tree.get_descendants().filter(node_type="chapter")
         context['next'] = book.get_next()
         context['prev'] = book.get_prev()
-        context['toc'] = Book.objects.filter(module=book.module.id).order_by('number')
+        context['toc'] = book.module.book_set.all().order_by('number')
         return context
+
 
 class Chapter_DetailView(DetailView):
     model = BookNode
     template_name = 'chapter_detail.html'
+
     def get_context_data(self, **kwargs):
         context = super(Chapter_DetailView, self).get_context_data(**kwargs)
         chapter = self.get_object()
-        context['module']  = Module.objects.get( code=chapter.mpath[:6] )
-        context['book']  = Book.objects.get( tree=chapter.get_root_node() )
+        context['module'] = chapter.get_book().module
+        context['book']  = chapter.get_book()
         context['chapter'] = chapter
         context['subtree'] = chapter.get_descendants(include_self=True)
         context['toc'] = chapter.get_siblings(include_self=True)
-        context['next'] = chapter.get_next()
-        context['prev'] = chapter.get_prev()
         return context
 
 class BookNode_DetailView(DetailView):
@@ -96,153 +100,73 @@ class BookNode_DetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super(BookNode_DetailView, self).get_context_data(**kwargs)
         subtree = self.get_object().get_descendants(include_self=True)
-        mcode = self.get_object().mpath[:6]
-        module = get_object_or_404(Module, code=mcode)
-        context['module']  = module
-        context['subtree']  = subtree
-        chapter = self.get_parent_chapter()
-        context['chapter']  = chapter
-        context['toc']  = Book.objects.filter( module=module )
+        module = self.get_object().get_book().module
+        context['module'] = module
+        context['subtree'] = subtree
+        chapter = self.get_object().get_parent_chapter()
+        context['chapter'] = chapter
+        context['toc'] = module.book_set.all()
         context['next'] = self.get_object().get_next()
         context['prev'] = self.get_object().get_prev()
         return context
 
-# the following should be implemented with javascript on the client
 # should use mptt instance methods instead of mpath
+
 def selected(request, pk, node_type):
-    context = RequestContext(request)
-    booknode = BookNode.objects.get( pk=pk )
-    module  = Module.objects.get( code=booknode.mpath[:6] )
-    chapter = BookNode.objects.get( mpath=booknode.mpath[:12] )
-    context['module']  = module
-    context['chapter']  = chapter
-    context['book']  = Book.objects.get( tree=chapter.get_root_node() )
-    context['user']  = request.user
+    context = {}
+    booknode = BookNode.objects.get(pk=pk)
+    module = booknode.get_book().module
+    chapter = booknode.get_parent_chapter()
+
+    context['module'] = module
+    context['chapter'] = chapter
+    context['book'] = chapter.get_book()
+    context['user'] = request.user
 
     context['node_type'] = node_type
+
+    chapter_items = chapter.get_descendants()
     if node_type == 'theorem':
-        qset = BookNode.objects.filter(node_class="theorem", mpath__startswith=chapter.mpath).order_by('mpath')
+        qset = chapter_items.filter(node_class="theorem").exclude(node_type__in=['example', 'exercise'])
     elif node_type == 'test':
-        qset = BookNode.objects.filter(node_type__in=['singlechoice','multiplechoice'], mpath__startswith=chapter.mpath).order_by('mpath')
+        qset = chapter_items.filter(node_type__in=['singlechoice', 'multiplechoice'])
     else:
-        qset = BookNode.objects.filter(node_type=node_type, mpath__startswith=chapter.mpath).order_by('mpath')
-    context['booknodes'] = qset
+        qset = chapter_items.filter(node_type=node_type)
+    context['booknodes'] = qset.order_by('mpath')
 
     context['next'] = chapter.get_next()
     context['prev'] = chapter.get_prev()
     context['toc'] = BookNode.objects.filter( node_type="chapter", mpath__startswith=module.code).order_by('mpath')
     return render(request, 'chapter_selected_nodes.html', context)
 
-# the following should be implemented with javascript on the client
-def theorems(request, pk):
-    context = RequestContext(request)
-    booknode = BookNode.objects.get( pk=pk )
-    module  = Module.objects.get( code=booknode.mpath[:6] )
-    chapter = BookNode.objects.get( mpath=booknode.mpath[:12] )
-    context['module']  = module
-    context['book']  = Book.objects.get( tree=chapter.get_root_node() )
-    context['chapter']  = chapter
-    qset = BookNode.objects.filter(node_class="theorem", mpath__startswith=chapter.mpath ).order_by('mpath')
-    qset = qset.exclude(node_type="example").exclude(node_type="exercise").exclude(node_type="test").exclude(node_type="homework")
-    context['blocks'] = qset
-    context['blocktype'] = 'theorem'
-    context['next'] = chapter.get_next()
-    context['prev'] = chapter.get_prev()
-    context['toc'] = BookNode.objects.filter( node_type="chapter", mpath__startswith=module.code).order_by('mpath')
-    return render(request, 'chapter_blocks.html', context)
-
-def examples(request, pk):
-    context = RequestContext(request)
-    booknode = BookNode.objects.get( pk=pk )
-    module  = Module.objects.get( code=booknode.mpath[:6] )
-    chapter = BookNode.objects.get( mpath=booknode.mpath[:12] )
-    context['module']  = module
-    context['chapter']  = chapter
-    context['book']  = Book.objects.get( tree=chapter.get_root_node() )
-    qset = BookNode.objects.filter(node_type="example", mpath__startswith=chapter.mpath ).order_by('mpath')
-    context['blocks'] = qset
-    context['blocktype'] = 'example'
-    context['next'] = chapter.get_next()
-    context['prev'] = chapter.get_prev()
-    context['toc'] = BookNode.objects.filter( node_type="chapter", mpath__startswith=module.code).order_by('mpath')
-    return render(request, 'chapter_blocks.html', context)
-
-def exercises(request, pk):
-    context = RequestContext(request)
-    booknode = BookNode.objects.get( pk=pk )
-    module  = Module.objects.get( code=booknode.mpath[:6] )
-    chapter = BookNode.objects.get( mpath=booknode.mpath[:12] )
-    context['module']  = module
-    context['chapter']  = chapter
-    context['book']  = Book.objects.get( tree=chapter.get_root_node() )
-    qset = BookNode.objects.filter(node_type="exercise", mpath__startswith=chapter.mpath ).order_by('mpath')
-    context['blocks'] = qset
-    context['blocktype'] = 'exercise'
-    context['next'] = chapter.get_next()
-    context['prev'] = chapter.get_prev()
-    context['toc'] = BookNode.objects.filter( node_type="chapter", mpath__startswith=module.code).order_by('mpath')
-    return render(request, 'chapter_blocks.html', context)
-
-def tests(request, pk):
-    context = RequestContext(request)
-    booknode = BookNode.objects.get( pk=pk )
-    module  = Module.objects.get( code=booknode.mpath[:6] )
-    chapter = BookNode.objects.get( mpath=booknode.mpath[:12] )
-    context['module']  = module
-    context['chapter']  = chapter
-    context['book']  = Book.objects.get( tree=chapter.get_root_node() )
-    qset = BookNode.objects.filter(node_type__in=["singlechoice","multiplechoice"], mpath__startswith=chapter.mpath ).order_by('mpath')
-    context['blocks'] = qset
-    context['blocktype'] = 'test'
-    context['next'] = chapter.get_next()
-    context['prev'] = chapter.get_prev()
-    context['toc'] = BookNode.objects.filter( node_type="chapter", mpath__startswith=module.code).order_by('mpath')
-    return render(request, 'chapter_blocks.html', context)
-
-def homeworks(request, pk):
-    context = RequestContext(request)
-    booknode = BookNode.objects.get( pk=pk )
-    module  = Module.objects.get( code=booknode.mpath[:6] )
-    chapter = BookNode.objects.get( mpath=booknode.mpath[:12] )
-    context['module']  = module
-    context['chapter']  = chapter
-    context['book']  = Book.objects.get( tree=chapter.get_root_node() )
-    qset = BookNode.objects.filter(node_type="homework", mpath__startswith=chapter.mpath ).order_by('mpath')
-    context['blocks'] = qset
-    context['blocktype'] = 'homework'
-    context['next'] = chapter.get_next()
-    context['prev'] = chapter.get_prev()
-    context['toc'] = BookNode.objects.filter( node_type="chapter", mpath__startswith=module.code).order_by('mpath')
-    return render(request, 'chapter_blocks.html', context)
-
-
 # edit answer form
 @login_required
 def edit_answer(request, pk):
-    context = RequestContext(request)
+    context = {}
     qu = BookNode.objects.get(pk=pk)
-    context['module']  = get_object_or_404( Module, code=qu.mpath[:6] )
-    context['book']  = Book.objects.get( tree=qu.get_root_node() )
+    context['module'] = qu.get_book().module
+    context['book'] = qu.get_book()
     context['question'] = qu
     context['subtree'] = qu.get_descendants(include_self=True)
     context['chapter'] = qu.get_parent_chapter()
-    context['assignment'] = qu.get_parent_assignment()
+    assignment = qu.get_parent_assignment()
+    context['assignment'] = assignment
     context['toc'] = qu.get_siblings(include_self=True)
 
     # navigation
-    questions = BookNode.objects.filter( node_type="question", mpath__startswith=qu.mpath[:12] ).order_by('mpath')
+    questions = assignment.get_descendants().filter(node_type="question").order_by('mpath')
     next = questions.filter( mpath__gt=qu.mpath )
     prev = questions.filter( mpath__lt=qu.mpath ).order_by('-pk')
     context['next'] = next[0] if next else None
     context['prev'] = prev[0] if prev else None
 
-	# answer form
+    # answer form
     # retreive current saved answer (if any)
-    ans = Answer.objects.filter(question=qu, user=request.user).first()
-    if ans:
+    try:
+        ans = Answer.objects.get(question=qu, user=request.user)
         form = AnswerForm(instance=ans)
-    else:
-        form = AnswerForm( initial={'question': qu, 'user': request.user})
+    except Answer.DoesNotExist:
+        form = AnswerForm(initial={'question': qu, 'user': request.user})
 
     # gulp
     if request.method == 'POST':
@@ -287,16 +211,16 @@ def edit_answer(request, pk):
 # single choice test
 @login_required
 def sctest(request, pk):
-    context = RequestContext(request)
+    context = {}
     test = BookNode.objects.get(pk=pk)
     chapter = test.get_parent_chapter()
     questions = BookNode.objects.filter(node_type='question', mpath__startswith=test.mpath).order_by('mpath')
 
-    context['module']  = get_object_or_404( Module, code=test.mpath[:6] )
+    context['module'] = chapter.get_book().module
     context['test'] = test
     context['chapter'] = chapter
     context['questions'] = questions
-    context['book']  = Book.objects.get( tree=chapter.get_root_node() )
+    context['book']  = chapter.get_book()
     context['toc'] = BookNode.objects.filter( node_type="homework", mpath__startswith=chapter.mpath ).order_by('mpath')
 
     # navigation
@@ -371,22 +295,21 @@ def sctest(request, pk):
 # homework (question set)
 @login_required
 def homework(request, pk):
-    context = RequestContext(request)
+    context = {}
     hwk = BookNode.objects.get(pk=pk)
-    context['module']  = get_object_or_404( Module, code=hwk.mpath[:6] )
+    context['module'] = hwk.get_book().module
     context['homework'] = hwk
     # context['subtree'] = ex.get_descendants(include_self=True)
     chapter = hwk.get_parent_chapter()
     context['chapter'] = chapter
-    context['book']  = Book.objects.get( tree=chapter.get_root_node() )
-    context['toc'] = BookNode.objects.filter( node_type="homework", mpath__startswith=hwk.mpath[:9] ).order_by('mpath')
+    context['book'] = hwk.get_book()
+    homeworks = chapter.get_descendants().filter(node_type="homework").order_by('mpath')
+    context["toc"] = homeworks
 
     # navigation
-    module = context['module']
-    homeworks = BookNode.objects.filter( node_type="homework", mpath__startswith=hwk.mpath[:9] ).order_by('mpath')
     next = homeworks.filter( mpath__gt=hwk.mpath )
     prev = homeworks.filter( mpath__lt=hwk.mpath ).order_by('-mpath')
-    context['next'] = next[0] if next else None
+    context['nnext'] = next[0] if next else None
     context['prev'] = prev[0] if prev else None
 
     questions = BookNode.objects.filter(node_type='question', mpath__startswith=hwk.mpath).order_by('mpath')
@@ -448,24 +371,14 @@ def search(request):
 # users
 #--------------------
 def login_view(request):
-    context = RequestContext(request)
     if request.method == 'POST':
-        username = request.POST['username']
-        password = request.POST['password']
-        user = authenticate(username=username, password=password)
-        if user:
-            if user.is_active:
-                login(request, user)
-                return render(request, 'userhome.html', {'pk': user.pk})
-
-                return HttpResponseRedirect('/')
-            else:
-                return HttpResponse("Account is inactive.")
-        else:
-            print "Invalid login details: %s, %s" % (username, password)
-            return HttpResponse("Login incorrect.")
+        form = AuthenticationForm(request, request.POST)
+        if form.is_valid():
+            login(request, form.get_user())
+            return render(request, 'userhome.html', {'pk': form.get_user_id()})
     else:
-        return render_to_response('login.html', {}, context)
+        form = AuthenticationForm(request)
+    return render(request, "login.html", {"form": form})
 
 @login_required
 def userhome(request, pk):

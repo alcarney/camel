@@ -33,25 +33,16 @@
 {% endblock %}
 
 {% block browse-horizontal %}
-<span class="left">{% if prev %}<a href="{% url 'chapter-detail' prev.pk %}">&lt; {{ prev.number }}. {{ prev.title }}</a>{% endif %}</span>
-<span class="right">{% if next %}<a href="{% url 'chapter-detail' next.pk %}">{{ next.number }}. {{ next.title }} &gt;</a>{% endif %}</span>
+    {% with obj=chapter %}
+        {% include "bottomnav.html" %}
+    {% endwith %}
 {% endblock %}
 
 {% block sidebar %}
 	{% if toc %}
-	<h3>Chapters</h3>
-		{% for chap in toc %}
-			{% if chap.node_type == "chapter" %}
-				{% if chap.pk != chapter.pk %}
-					<p><a href="{% url 'chapter-detail' chap.pk %}"> {{ chap.number }}. {{ chap.title }}</a></p>
-				{% else %}
-					<p>{{ chap.number }}. {{ chap.title }}</p>
-				{% endif %}
-			{% endif %}
-		{% endfor %}
-	{% else %}
-	    <p>No toc</p>
-	{% endif %}
-
+    	<h3>Chapters</h3>
+        {% with obj=chapter %}
+            {% include "toc.html" %}
+        {% endwith %}
+    {%  endif %}
 {% endblock %}
-

@@ -5,7 +5,7 @@
 {% endblock %}
 
 {% block breadcrumbs %}
-	{{ block.super }}&gt;&nbsp;<a href="{% url 'module-detail' module.pk %}">{{ node_type | title }}s</a>
+	{{ block.super }}&gt;&nbsp;<a href="{% url 'chapter-selected' node_type chapter.pk %}">{{ node_type | title }}s</a>
 {% endblock %}
 
 {% block content-main %}
@@ -18,7 +18,6 @@
 </div>
 
 {% include "chapter_navigation_block.html" %}
-
 
 <h1>Chapter {{ chapter.number }} - {{ node_type | title }}s </h1>
 <br>

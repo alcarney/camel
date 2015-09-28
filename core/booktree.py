@@ -116,6 +116,18 @@ doctree.py: build book tree from latex file (camel.cls)
 
     content: (mathjax|image|ref|cite)
 
+
+    To avoid writing nodes to the tree one-at-a-time
+    context manager for mptt tree
+        all context managers have __enter and __exit methods
+        mptt has delay_mptt_update
+            -> put this into the __enter
+
+    involved with the "with" keyword (closes all within the context/scope )
+    with file as f:
+        etc
+            
+
 '''
 
 
@@ -132,57 +144,10 @@ from django.db.models import ImageField
 # logging
 out = logging.getLogger(__name__)
 
-#-----------------------------
-# lookup tables
-#-----------------------------
-# assign node_types to node_classes
-# used to find the set of node_types belonging to a given node_class 
-node_types = {
-    'assignment': ('homework', 'singlechoice', 'multiplechoice'),
-    'box': ('proof', 'solution', 'answer', 'hint', 'verbatim', 'center'),
-    'content': ('image', 'jax', 'reference', 'citation', 'tabular'),
-    'level': ('book', 'chapter', 'section', 'subsection'),
-    'float': ('table', 'figure', 'subfigure'),
-    'mathmode': ('equation', 'eqnarray', 'array', 'align', 'cases'),
-    'item': ('item', 'part', 'question', 'subpart', 'choice', 'correctchoice'),
-    'list': ('itemize', 'enumerate',  'questions', 'parts', 'subparts', 'choices', 'checkboxes'),
-    'theorem': ('definition', 'theorem', 'lemma',  'corollary',  'remark', 'example', 'exercise')
-}
-
-# lookp table to find out which node_class a given node_type belongs to
-node_classes = dict([ (k2,k1) for k1 in node_types.keys() for k2 in node_types[k1] ])
-
-# item dictionary (which items should be used in which environments)
-item_dict = {
-    'itemize':      'item',
-    'enumerate':    'item',
-    'questions':    'question',
-    'parts':        'part',
-    'subparts':     'subpart',
-    'choices':      'choice|correctchoice',
-    'checkboxes':   'choice|correctchoice',
-}
-
 #------------------------------------------------
 # classes
 #------------------------------------------------
-# class CamelBook(object):
-#     def __init__(self, title=None, author=None, version=None):
-#         self.title = title
-#         self.author = author
-#         self.version = version
-#         self.new_commands = None
-#         self.tree = None
-#
-#     def __unicode__(self):
-#         s = ''
-#         if self.title: s += self.title
-#         if self.author: s += '|' + self.author
-#         if self.version: s += '|' + self.version
-#         if self.new_commands: s += '\n' + self.new_commands
-#         if self.tree: s += '\n' + self.tree.__repr__()
-#         return s
-#
+
 class Node(object):
     counter = 0    
     def __init__(self, parent=None):
@@ -265,13 +230,14 @@ class Node(object):
         if prefix:
             booknode.mpath = prefix + booknode.mpath
 
-        # set attributes
-        # booknode.module = module
-        if parent:
+        # set parent (if commit)
+        if parent and commit:
             booknode.parent = parent
+
+        # set attributes
         booknode.is_readonly = is_readonly            
         booknode.node_type = self.__class__.__name__.lower()
-        booknode.node_class = node_classes[booknode.node_type]
+        booknode.node_class = node_class[booknode.node_type]
         if hasattr(self, 'label'):
             booknode.label = self.label
         if hasattr(self, 'number'):
@@ -426,18 +392,6 @@ class Singlechoice(Test):
 class Multiplechoice(Test):
     def __init__(self, title=None, label=None, parent=None):
         Test.__init__(self, title=title, label=label, parent=parent)
-
-# class Diagnostic(Homework):
-#     def __init__(self, title=None, label=None, parent=None):
-#         Homework.__init__(self, title=title, label=label, parent=parent)
-#
-# class Formative(Homework):
-#     def __init__(self, title=None, label=None, parent=None):
-#         Homework.__init__(self, title=title, label=label, parent=parent)
-#
-# class Summative(Homework):
-#     def __init__(self, title=None, label=None, parent=None):
-#         Homework.__init__(self, title=title, label=label, parent=parent)
 
 #-----------------------------
 # list blocks (no title)
@@ -702,6 +656,168 @@ class Jax(Content):
         self.content = s.strip()
     
 
+
+
+# boilerplate code
+
+#-----------------------------
+# lookup tables
+#-----------------------------
+# assign node_types to node_classes
+# used to find the set of node_types belonging to a given node_class 
+node_types = {
+    'assignment': ('homework', 'singlechoice', 'multiplechoice'),
+    'box': ('proof', 'solution', 'answer', 'hint', 'verbatim', 'center'),
+    'content': ('image', 'jax', 'reference', 'citation', 'tabular'),
+    'level': ('book', 'chapter', 'section', 'subsection'),
+    'float': ('table', 'figure', 'subfigure'),
+    'mathmode': ('equation', 'eqnarray', 'array', 'align', 'cases'),
+    'item': ('item', 'part', 'question', 'subpart', 'choice', 'correctchoice'),
+    'list': ('itemize', 'enumerate',  'questions', 'parts', 'subparts', 'choices', 'checkboxes'),
+    'theorem': ('definition', 'theorem', 'lemma',  'corollary',  'remark', 'example', 'exercise')
+}
+
+# lookp table to find out which node_class a given node_type belongs to
+node_class = dict([ (k2,k1) for k1 in node_types.keys() for k2 in node_types[k1] ])
+
+# item dictionary (which items should be used in which environments)
+item_dict = {
+    'itemize':      'item',
+    'enumerate':    'item',
+    'questions':    'question',
+    'parts':        'part',
+    'subparts':     'subpart',
+    'choices':      'choice|correctchoice',
+    'checkboxes':   'choice|correctchoice',
+}
+
+# dictionary of classes corresponding to node_type
+# doctree_class = {
+#     'level': {
+#         'book':             Book,
+#         'chapter':          Chapter,
+#         'section':          Section,
+#         'subsection':       Subsection,
+#     },
+#     'list':     {
+#         'itemize':          Itemize,
+#         'enumerate':        Enumerate,
+#         'questions':        Questions,
+#         'parts':            Parts,
+#         'subparts':         Subparts,
+#         'choices':          Choices,
+#         'checkboxes':       Checkboxes,
+#     },
+#     'item':     {
+#         'item':             Item,
+#         'question':         Question,
+#         'part':             Part,
+#         'subpart':          Subpart,
+#         'choice':           Choice,
+#         'correctchoice':    Correctchoice,
+#     },
+#     'assignment': {
+#         'homework':         Homework,
+#         'singlechoice':     Singlechoice,
+#         'multiplechoice':   Multiplechoice,
+#     },
+#     'float': {
+#         'figure':           Figure,
+#         'table':            Table,
+#         'subfigure':        Subfigure,
+#         'subtable':         Subtable,
+#     },
+#     'theorem':  {
+#         'theorem':          Theorem,
+#         'definition':       Definition,
+#         'lemma':            Lemma,
+#         'corollary':        Corollary,
+#         'remark':           Remark,
+#         'example':          Example,
+#         'exercise':         Exercise,
+#     },
+#     'box': {
+#         'proof':        Proof,
+#         'answer':       Answer,
+#         'solution':     Solution,
+#         'hint':         Hint,
+#         'verbatim':     Verbatim,
+#         'center':       Center,
+#     },
+#     'mathmode': {
+#         'equation':     None,
+#         'eqnarray':     None,
+#         'cases':        None,
+#         'align':        None,
+#         'array':        None,
+#     },
+#     'content': {
+#         'jax':          Jax,
+#         'tabular':      Tabular,
+#         'image':        Image,
+#         'reference':    Reference,
+#         'citation':     Citation,
+#     },
+# }
+
+# # node_type grouped by node_class
+# node_types = { key : tuple( doctree_class[key].keys() ) for key in doctree_class.keys() }
+    
+# node_class grouped by node_type
+# node_class = dict([ (k2,k1) for k1 in cldoctree_class.keys() for k2 in doctree_class[k1].keys() ])
+
+
+# dictionary of classes corresponding to node_type
+class_lookup = {
+    'book':             Book,
+    'chapter':          Chapter,
+    'section':          Section,
+    'subsection':       Subsection,
+    'itemize':          Itemize,
+    'enumerate':        Enumerate,
+    'questions':        Questions,
+    'parts':            Parts,
+    'subparts':         Subparts,
+    'choices':          Choices,
+    'checkboxes':       Checkboxes,
+    'item':             Item,
+    'question':         Question,
+    'part':             Part,
+    'subpart':          Subpart,
+    'choice':           Choice,
+    'correctchoice':    Correctchoice,
+    'homework':         Homework,
+    'singlechoice':     Singlechoice,
+    'multiplechoice':   Multiplechoice,
+    'figure':           Figure,
+    'table':            Table,
+    'subfigure':        Subfigure,
+    'subtable':         Subtable,
+    'theorem':          Theorem,
+    'definition':       Definition,
+    'lemma':            Lemma,
+    'corollary':        Corollary,
+    'remark':           Remark,
+    'example':          Example,
+    'exercise':         Exercise,
+    'proof':            Proof,
+    'answer':           Answer,
+    'solution':         Solution,
+    'hint':             Hint,
+    'verbatim':         Verbatim,
+    'center':           Center,
+    'jax':              Jax,
+    'tabular':          Tabular,
+    'image':            Image,
+    'reference':        Reference,
+    'citation':         Citation,
+    'equation':         None,
+    'eqnarray':         None,
+    'cases':            None,
+    'align':            None,
+    'array':            None,
+}
+
 #-----------------------------
 # TexParser class (root node of document tree)
 class TexParser(object):
@@ -807,8 +923,6 @@ class TexParser(object):
         s = re.sub(r'\\it\s+', r'\\item ', s)
         return s
         
-    
-    
     def make_book(self, main_file="main.tex"):
 
         # check preamble
@@ -1216,7 +1330,10 @@ class TexParser(object):
             
             # containers
             else:
-                node = eval( snip_type.capitalize() )( parent=parent )
+                classname = class_lookup[ snip_type ]
+                node = classname( parent=parent )
+                
+                # node = eval( snip_type.capitalize() )( parent=parent )
                 # print '=========================================='
                 # print snip_type
                 # print type(node)
@@ -1241,10 +1358,8 @@ class TexParser(object):
 
                 # all others
                 else:
-                    # print snip_type
                     if snip_title: 
                         node.title = snip_title
-                    # print content
                     node.children = self.parse_snippet( snippet=snip, parent=node )
 
                 children.append(node)
@@ -1309,7 +1424,9 @@ class TexParser(object):
         tail = snippet
         while tail:
             snip, tail, item_type = find_next_item(tail, item_name=item_name)
-            item = eval( item_type.capitalize() )(parent=parent)
+            classname = class_lookup[ item_type ]
+            item = classname( parent=parent )
+            # item = eval( item_type.capitalize() )(parent=parent)
             item.children = self.parse_snippet( snippet=snip, parent=item  )
             item_list.append( item )
 
@@ -1378,7 +1495,7 @@ def main(args=None):
         else:
             out.info( 'Updating existing module %s/%s' % (code, year) )
         number = preamble['book_number']
-        bk = core.models.Book.objects.filter(module=module, number=number).first()
+        bk = module.book_set.filter(number=number).first()
         if bk:
             out.info( 'Existing book %s/%s/%s will be deleted' % (code, year, number) )
             for booknode in core.models.BookNode.objects.filter(mpath__startswith=bk.tree.mpath):
@@ -1419,10 +1536,14 @@ def main(args=None):
         pairs = book.get_label_mpaths()
         for pair in pairs:
             lab = core.models.Label()
+<<<<<<< HEAD
             lab.book = camel_book
+=======
+>>>>>>> 0141e817d00d8878e57e76717d9b69239dd433e2
             lab.text = prefix + '.' + pair[0]
             lab.mpath = prefix + pair[1]
             if options.commit:
+                lab.book = cbook
                 lab.save()
             else:
                 print lab

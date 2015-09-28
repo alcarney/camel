@@ -42,7 +42,12 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'django_extensions',
     'mptt',
+<<<<<<< HEAD
     'core',
+=======
+	'core',
+    'review',
+>>>>>>> 0141e817d00d8878e57e76717d9b69239dd433e2
 )
 
 MIDDLEWARE_CLASSES = (
@@ -100,7 +105,9 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = (
-    os.path.join(SITE_ROOT, "static"),
+    os.path.join(SITE_ROOT, "core", "static"),
 )
+STATIC_ROOT = os.path.join(SITE_ROOT, "staticfiles")
+
 # redirect
 LOGIN_URL = '/login/'
