@@ -1340,7 +1340,7 @@ def main(args=None):
         print 'usage: $python doctree.py main.tex (camel.cls)'
         return
 
-    # test new stuff
+    # parse
     main_tex = args[0]
     p = TexParser()
     book = p.parse_book( main_tex )
@@ -1366,18 +1366,6 @@ def main(args=None):
     # camel database output
     if options.db:
         
-        # hack to set user-defined latex macros
-        nc = ''
-        nc += r'\newcommand{\N}{\mathbb{N}}'
-        nc += r'\newcommand{\Z}{\mathbb{Z}}'
-        nc += r'\newcommand{\R}{\mathbb{R}}'
-        nc += r'\newcommand{\C}{\mathbb{C}}'
-        nc += r'\newcommand{\prob}{\mathbb{P}}'
-        nc += r'\newcommand{\expe}{\mathbb{E}}'
-        nc += r'\newcommand{\var}{\text{Var}}'
-        nc += r'\newcommand{\cov}{\text{Cov}}'
-        nc += r'\newcommand{\supp}{\text{supp}}'
-
         # check whether this module already exists in the database
         preamble = p.parse_preamble( main_tex )
         code = preamble['module_code']
@@ -1389,7 +1377,6 @@ def main(args=None):
             module.save()
         else:
             out.info( 'Updating existing module %s/%s' % (code, year) )
-
         number = preamble['book_number']
         bk = core.models.Book.objects.filter(module=module, number=number).first()
         if bk:
@@ -1399,37 +1386,31 @@ def main(args=None):
             bk.delete()
         
 
-        # set module newcommands
-        # book.newcommands = nc
-        # book.save()
-        
-        # print preamble
-        
-        cbook = core.models.Book()
+        camel_book = core.models.Book()
         code = preamble['module_code']
         year = preamble['academic_year']
         
-        cbook.module = core.models.Module.objects.filter(code=code, year=year).first()
+        camel_book.module = core.models.Module.objects.filter(code=code, year=year).first()
         if 'book_number' in preamble:
-            cbook.number = int(preamble['book_number'])
+            camel_book.number = int(preamble['book_number'])
         else:
-            cbook.number = 0
+            camel_book.number = 0
         if 'book_title' in preamble:
-            cbook.title = preamble['book_title']
+            camel_book.title = preamble['book_title']
         if 'book_author' in preamble:
-            cbook.author = preamble['book_author']
+            camel_book.author = preamble['book_author']
         if 'book_version' in preamble:
-            cbook.version = preamble['book_version']
+            camel_book.version = preamble['book_version']
         if 'new_commands' in preamble:
-            cbook.new_commands = preamble['new_commands']
+            camel_book.new_commands = preamble['new_commands']
             
-        hexstr = hex( cbook.number )[2:].zfill(2)
+        hexstr = hex( camel_book.number )[2:].zfill(2)
         prefix = code + '.' + hexstr
 
         # write book database
         if options.commit:
-            cbook.tree = book.write_to_camel_database(prefix=prefix, commit=True)
-            cbook.save()
+            camel_book.tree = book.write_to_camel_database(prefix=prefix, commit=True)
+            camel_book.save()
             
         else:
             book.write_to_camel_database(prefix=prefix, commit=False)
@@ -1438,7 +1419,7 @@ def main(args=None):
         pairs = book.get_label_mpaths()
         for pair in pairs:
             lab = core.models.Label()
-            lab.book = cbook
+            lab.book = camel_book
             lab.text = prefix + '.' + pair[0]
             lab.mpath = prefix + pair[1]
             if options.commit:

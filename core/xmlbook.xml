@@ -743,10 +743,18 @@ From here, it follows that $\prob(A\cup B)=\prob(A)+\prob(B)-\prob(A\cap B)$, an
           <question number="1">
             <jax>Which of the following statements are correct?</jax>
             <checkboxes number="13">
-              <jax>\correctchoice $1 + 1 = 2$
-	\choice $1 + 1 = 3$
-	\choice $2 + 2 = 3$
-	\correctchoice $2 +2 = 4$</jax>
+              <correctchoice number="1">
+                <jax>$1 + 1 = 2$</jax>
+              </correctchoice>
+              <choice number="2">
+                <jax>$1 + 1 = 3$</jax>
+              </choice>
+              <choice number="3">
+                <jax>$2 + 2 = 3$</jax>
+              </choice>
+              <correctchoice number="4">
+                <jax>$2 +2 = 4$</jax>
+              </correctchoice>
             </checkboxes>
           </question>
         </questions>

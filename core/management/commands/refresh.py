@@ -14,7 +14,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
 
 from core.booktree import TexParser
-from core.models import Module, BookNode
+from core.models import Module, BookNode, Book, Label
 
 SITE_ROOT = getattr(settings, 'SITE_ROOT')
 TEX_ROOT  = getattr(settings, 'TEX_ROOT')
@@ -23,7 +23,7 @@ out = logging.getLogger(__name__)
 
 class Command(BaseCommand):
     '''
-    Currently deletes the existing booktree entirely, which will be a problemm when answers
+    Currently deletes the existing book entirely, which will be a problemm when answers
     and submissions point to question and assessment objects.
     '''
     args = 'module_code (, module_code, ...)'
@@ -57,69 +57,89 @@ class Command(BaseCommand):
             # find main.tex
             main_tex = os.path.join(TEX_ROOT, module_code, 'main.tex')
 
-            # create book tree
+            # parse
             p = TexParser()
-            preamble = p.parse_preamble( main_tex )
-            book = p.parse_book( main_tex )
-            book.title = preamble['book_title']
+            tree = p.parse_book( main_tex )
+
+            # text output (native format)
+            if options['text']:
+                print tree
 
             # xml output
             if options['xml']:
-                xml = book.prettyprint_xml()
+                xml = tree.prettyprint_xml()
                 self.stdout.write( xml )
 
             # labels
-            elif options['labels']:
-                pairs = book.get_label_mpaths()
+            if options['labels']:
+                pairs = tree.get_label_mpaths()
                 col_width = max( [len(pair[0]) for pair in pairs] ) + 2  # padding
                 for pair in pairs:
                     self.stdout.write( pair[0].ljust(col_width) + pair[1] )
 
             # database
-            elif options['db'] or options['commit']:
+            if options['db'] or options['commit']:
 
                 # check whether this module already exists in the database
+                preamble = p.parse_preamble( main_tex )
                 code = preamble['module_code']
                 year = preamble['academic_year']
-                modules = Module.objects.filter(code=code, year=year)
-                if not modules:
+                module = Module.objects.filter(code=code, year=year).first()
+                if not module:
                     out.info( 'Creating new module %s/%s' % (code, year) )
-                    mo = Module(code=code, year=year, title=preamble['module_title'], newcommands='')
-                    mo.save()
-                elif len(modules) == 1:
-                    out.info( 'Updating existing module %s/%s (existing doctree will be deleted)' % (code, year) )
-                    mo = modules[0]
-                    for bo in BookNode.objects.filter(module=mo):
-                        bo.delete()
+                    module = Module(code=code, year=year, title=preamble['module_title'])
+                    module.save()
                 else:
-                    out.error('Error: database contains more than one (%s, %s)!' % (code, year) )
-                    continue
+                    out.info( 'Updating existing module %s/%s' % (code, year) )
+                number = preamble['book_number']
+                book = Book.objects.filter(module=module, number=number).first()
+                if book:
+                    out.info( 'Existing book %s/%s/%s will be deleted' % (code, year, number) )
+                    for booknode in BookNode.objects.filter(mpath__startswith=book.tree.mpath):
+                        booknode.delete()
+                    book.delete()
+        
 
-                # hack to set user-defined latex macros
-                nc = ''
-                nc += r'\newcommand{\N}{\mathbb{N}}'
-                nc += r'\newcommand{\Z}{\mathbb{Z}}'
-                nc += r'\newcommand{\R}{\mathbb{R}}'
-                nc += r'\newcommand{\C}{\mathbb{C}}'
-                nc += r'\newcommand{\prob}{\mathbb{P}}'
-                nc += r'\newcommand{\expe}{\mathbb{E}}'
-                nc += r'\newcommand{\var}{\text{Var}}'
-                nc += r'\newcommand{\cov}{\text{Cov}}'
-                nc += r'\newcommand{\supp}{\text{supp}}'
-                mo.newcommands = nc
+                book = Book()
+                code = preamble['module_code']
+                year = preamble['academic_year']
+        
+                book.module = Module.objects.filter(code=code, year=year).first()
+                if 'book_number' in preamble:
+                    book.number = int(preamble['book_number'])
+                else:
+                    book.number = 0
+                if 'book_title' in preamble:
+                    book.title = preamble['book_title']
+                if 'book_author' in preamble:
+                    book.author = preamble['book_author']
+                if 'book_version' in preamble:
+                    book.version = preamble['book_version']
+                if 'new_commands' in preamble:
+                    book.new_commands = preamble['new_commands']
+            
+                hexstr = hex( book.number )[2:].zfill(2)
+                prefix = code + '.' + hexstr
 
-                # save module
-                mo.save()
-
-                # write to database
+                # write book database
                 if options['commit']:
-                    book.write_to_camel_database(module=mo, commit=True)
+                    book.tree = tree.write_to_camel_database(prefix=prefix, commit=True)
+                    book.save()
+            
                 else:
-                    book.write_to_camel_database(module=mo, commit=False)
-
-            # default: text output
-            else:
-                print book
+                    tree.write_to_camel_database(prefix=prefix, commit=False)
+          
+                # write labels to database
+                pairs = tree.get_label_mpaths()
+                for pair in pairs:
+                    lab = Label()
+                    lab.book = book
+                    lab.text = prefix + '.' + pair[0]
+                    lab.mpath = prefix + pair[1]
+                    if options['commit']:
+                        lab.save()
+                    else:
+                        print lab
 
         # end iterate over modules
 
