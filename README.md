@@ -2,8 +2,6 @@
 ## CAMEL: CArdiff Mathematics E-Learning
 --
 
-### Directory Structure
-
 ### manage.py commands
 
 ##### $ python manage.py refresh MODULE_CODE --options
