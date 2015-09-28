@@ -4,60 +4,6 @@
 
 ### Directory Structure
 
-	.git/
-	.gitignore
-	
-	camel/
-		admin.py
-		doctree.py
-		models.py
-		settings.py
-		urls.py
-		views.py
-		wsgi.py
-	
-		management/
-			- refresh.py	    # update database
-			- update.py		    # update pdf
-			- readsims.py		# read students enrolled on module
-	
-	data/
-        pdf/
-            MA0000/
-                notes.pdf
-                notes-with-blanks.pdf
-                slides.pdf
-        /sims
-            MA0000_students.csv
-        /tex
-            MA0000/
-                camel.cls -> ../../texmf/camel.cls
-                camel.sty -> ../../texmf/camel.sty
-                main.tex
-                references.bib
-
-	fixtures/
-		users.json
-		modules.json
-		books.json
-	
-	static/
-		base.css
-		camel_logo.png
-
-	templates/
-		- base.html
-		- index.html
-		- modules.html
-		- module-detail.html
-		- chapter-detail.html
-		- login.html
-		- logout-success.html
-
-	texmf/
-		- camel.cls
-		- camel.sty
-
 ### manage.py commands
 
 ##### $ python manage.py refresh MODULE_CODE --options
@@ -86,9 +32,3 @@
 		-d: pretend write to database
 		-commit: real write to database
 		
-### How-To
-
-##### Re-install the database from scratch (from xml files)
-1. $ rm SITE_ROOT/data/camel.db
-2. $ python manage.py readsims students.xml
-3. $ python manage.py refresh MA0000 --commit 
