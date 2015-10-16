@@ -33,7 +33,8 @@ class Command(BaseCommand):
         make_option("--text", action="store_true", dest="text", default=False, help="print document tree to stdout"),
         make_option("--xml", action="store_true", dest="xml", default=False, help="print xml tree to stdout"),
         make_option("--labels", action="store_true", dest="labels", help="print (label, mpath) pairs to stdout"),
-        make_option("--db", action="store_true", dest="db", default=False, help="write to database"),
+        make_option("--db", action="store_true", dest="db", default=False, help="update camel database (dummy run)"),
+    	make_option("--commit", action="store_true", dest="commit", help="update camel database (commit changes)")
     )
 
     def handle(self, *args, **options):
@@ -132,10 +133,10 @@ class Command(BaseCommand):
                 pairs = tree.get_label_mpaths()
                 for pair in pairs:
                     lab = Label()
-                    lab.book = book
                     lab.text = prefix + '.' + pair[0]
                     lab.mpath = prefix + pair[1]
                     if options['commit']:
+                    	lab.book = book
                         lab.save()
                     else:
                         print lab
