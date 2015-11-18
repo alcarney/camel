@@ -1,5 +1,7 @@
 --
 ## CAMEL: CArdiff Mathematics E-Learning
+
+[![Join the chat at https://gitter.im/dimbyd/camel](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/dimbyd/camel?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 --
 
 ### manage.py commands
