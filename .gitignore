@@ -3,8 +3,6 @@
 *.swp
 *.log
 backup/*
-data/pdf/*
-data/sims/*
 *.aux
 *.bbl
 *.dvi
@@ -16,3 +14,25 @@ data/sims/*
 *.synctex.gz
 *.thm
 *.toc
+
+# sqlite databases
+*.db
+
+# pycharm files
+.idea/*
+
+bin/*
+# VirtualEnv files
+include/*
+lib/*
+local/*
+venv/*
+
+# IPython files
+share/*
+camel.db.bak
+
+# Don't commit files in the collectstatic folder, except the README
+!staticfiles/README.md
+staticfiles/*
+

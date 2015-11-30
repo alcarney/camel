@@ -2,12 +2,19 @@
 {% load staticfiles %}
 
 <head>
-{% block styles %}
-	<link rel="stylesheet" type="text/css" href="{% static 'base.css' %}"/>
+	{% comment %}
+	explicit link to favicon here to force a refresh since it has moved.
+	update the version number on the end if it moves again.
+	probably should have a fully qualified url.
+	{% endcomment %}
+	<link rel="shortcut icon" href="/favicon.ico?v=2" />
+
+	{% block styles %}
+	<link rel="stylesheet" type="text/css" href="{% static 'core/css/base.css' %}"/>
 {% endblock %}
 
 {% block scripts %}
-	<script type="text/javascript" src="{% static 'base.js' %}"></script>
+	<script type="text/javascript" src="{% static 'core/js/main.js' %}"></script>
 	<script type="text/javascript" src="http://code.jquery.com/jquery-1.7.min.js"></script>
 
 	<!-- mathjax -->
@@ -22,7 +29,29 @@
 	  src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
 	</script>
 
-
+	<!-- showhide -->
+	<script type="text/javascript">
+    $(document).ready(function(){
+      $('.showhide').addClass("hidden");
+      $('.showhide_step').addClass("hidden");
+      $('.showhide').click(function() {
+        var $this = $(this);
+        if ($this.hasClass("hidden")) {
+          $(this).removeClass("hidden").addClass("visible");
+      } else {
+        $(this).removeClass("visible").addClass("hidden");
+        }
+      });
+      $('.showhide_step').hover(function() {
+        var $this = $(this);
+        if ($this.hasClass("hidden")) {
+          $(this).removeClass("hidden").addClass("visible");
+        } else {
+          $(this).removeClass("visible").addClass("hidden");
+        }
+      });
+    });
+	</script>
 
 {% endblock %}
 
@@ -32,19 +61,29 @@
 
 <body>
 <div id="container">
-    
+
     <div id="header">
     {% block logo %}
-        <h1 id="logo"><a href="/"><img src="{% static 'camel_logo.png' %}", alt="camel"/></a></h1>
+        <h1 id="logo"><a href="/"><img width="70" height="65" src="{% static 'core/images/camel_logo_reversed.png' %}", alt="camel (from iconsETC)"/></a></h1>
     {% endblock %}
     {% block banner %}
-        <h1 id="banner"><a href="/">Camel (beta)</a></h1>
+        <h1 id="banner">
+			<a href="/">
+				<span class="textlogo" style="color:black;">
+					<span style="font-size:150%">C<sup>a</sup>M<sub>e</sub>L</span>
+					&nbsp; Cardiff Maths eLearning
+				</span>
+			</a>
+		</h1>
     {% endblock %}
     {% block nav-global %}
         <ul id="nav-global">
             <li id="nav-index"><a href="/">Home</a></li>
             <li id="nav-modules"><a href="/modules/">Modules</a></li>
-            <!--li id="nav-exercises"><a href="/exercises/">Exercises</a></li-->
+            <!--li id="nav-homework"><a href="/homework/">Homework</a></li-->
+						{% if user.is_staff %}
+						  <li id="nav-review"><a href="{% url 'review:index' %}">Review</a></li>
+						{% endif %}
             <li id="nav-users">
 				{% if user.is_authenticated %}
 					<a href="/logout/">Logout</a>
@@ -56,16 +95,14 @@
     {% endblock %}
     </div>
 
-    
+
 	<div id="breadcrumbs">
 		{% block breadcrumbs %}
 			&nbsp;
 		{% endblock %}
-   </div>
+	</div>
+	<div id="columnwrap">
 
-    
-    <div id="columnwrap">
-        
         <div id="content-main">
 
 		    <!--div id="maintitle">
@@ -78,17 +115,16 @@
 
         	{% endblock %}
 			</div>
-		
+
         	<div id="browse-horizontal">
         		{% block browse-horizontal %}
-				&nbsp;
-        		{% endblock %} 
+        		{% endblock %}
         	</div>
-        
+
         	<div id="content-secondary">
         		{% block content-secondary %}
 				{% endblock %}
-				
+
         	</div>
     	</div>
 
@@ -97,7 +133,7 @@
 			{% endblock %}
         </div>
     </div>
-    
+
     <div id="footer">
     {% block footer %}
         &copy; <a href="http://www.caerdydd.ac.uk">Prifysgol Caerdydd</a> 2014.
@@ -107,4 +143,3 @@
 
 </body>
 </html>
-
